@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.21"
-reqwest = "0.10.10"
 futures = "0.3.8"
-tokio = { version = "1", features = ["full"] }
+url = "2.2.0"
+ureq = "1.5.4"
