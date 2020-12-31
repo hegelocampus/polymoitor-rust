@@ -28,17 +28,22 @@ fn parse_url(url: &String) -> String {
     }
 }
 
+fn get_status(url: &str) -> bool {
+    // Send get request, check for reqwest error for bad url and warn if so
+    let res = get(&url).call();
+    if res.error() {
+        println!("{:?}", res.status_text());
+    }
+
+    res.ok()
+}
+
 fn map_statuses(urls: Vec<String>) -> Vec<(String, bool)> {
     urls.into_iter()
-        .filter_map(|url| {
-            // Send get request, check for reqwest error for bad url and warn if so
-            let res = get(&url).call();
-            if res.ok() {
-                Some((url, true))
-            } else {
-                println!("{:?}", res.status_text());
-                Some((url, false))
-            }
+        .map(|url| {
+            let owned = url.to_owned();
+            let stat = get_status(&owned);
+            (owned, stat)
         })
         .collect()
 }
