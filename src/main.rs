@@ -48,10 +48,10 @@ fn parse_url(url: &String) -> String {
 }
 
 fn get_status(url: &str) -> bool {
-    // Send get request, check for reqwest error for bad url and warn if so
+    // Send get request, check for error for down url and warn if so
     let res = get(&url).call();
     if res.error() {
-        println!("{:?}", res.status_text());
+        println!("{} bad status: {}", url, res.status_text());
     }
 
     res.ok()
@@ -76,14 +76,16 @@ fn main() -> Result<(), &'static str> {
         let val_map = make_value_map(symbolic);
 
         let parsed_output = if compact {
-            let count = statuses.fold((0, 0), |acc, cur| {
-                if cur.1 {
-                    (acc.0 + 1, acc.1)
+            let (up_count, down_urls) = statuses.fold((0, Vec::new()), |(up_count, mut down_urls), (url, is_up)| {
+                if is_up {
+                    (up_count + 1, down_urls)
                 } else {
-                    (acc.0, acc.1 + 1)
+                    down_urls.push(url);
+                    (up_count, down_urls)
                 }
             });
-            format!("{}: {}, {}: {}", val_map.up, count.0, val_map.down, count.1)
+            let down_parsed = if down_urls.len() == 0 {"0".to_string()} else {down_urls.join(", ")};
+            format!("{}: {}, {}: {}", val_map.up, up_count, val_map.down, down_parsed)
         } else {
             statuses
                 .map(|(url, status)| {
