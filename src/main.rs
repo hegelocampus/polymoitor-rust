@@ -76,16 +76,26 @@ fn main() -> Result<(), &'static str> {
         let val_map = make_value_map(symbolic);
 
         let parsed_output = if compact {
-            let (up_count, down_urls) = statuses.fold((0, Vec::new()), |(up_count, mut down_urls), (url, is_up)| {
-                if is_up {
-                    (up_count + 1, down_urls)
-                } else {
-                    down_urls.push(url);
-                    (up_count, down_urls)
-                }
-            });
-            let down_parsed = if down_urls.len() == 0 {"0".to_string()} else {down_urls.join(", ")};
-            format!("{}: {}, {}: {}", val_map.up, up_count, val_map.down, down_parsed)
+            let (up_count, down_urls) = statuses.fold(
+                (0, Vec::new()),
+                |(up_count, mut down_urls), (url, is_up)| {
+                    if is_up {
+                        (up_count + 1, down_urls)
+                    } else {
+                        down_urls.push(url);
+                        (up_count, down_urls)
+                    }
+                },
+            );
+            let down_parsed = if down_urls.len() == 0 {
+                "0".to_string()
+            } else {
+                down_urls.join(", ")
+            };
+            format!(
+                "{}: {}, {}: {}",
+                val_map.up, up_count, val_map.down, down_parsed
+            )
         } else {
             statuses
                 .map(|(url, status)| {
