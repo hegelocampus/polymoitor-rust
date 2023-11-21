@@ -47,14 +47,15 @@ fn parse_url(url: &String) -> String {
     }
 }
 
-fn get_status(url: &str) -> bool {
+fn get_status(url: &str) -> Result<(), String> {
     // Send get request, check for error for down url and warn if so
     let res = get(&url).call();
     if res.error() {
-        println!("{} bad status: {}", url, res.status_text());
+        //(Issue) This is getting printed too early and is disrupting the output for the polybar
+        Err(format!("{} {}", res.status(), res.status_text()))
+    } else {
+        Ok(())
     }
-
-    res.ok()
 }
 
 fn main() -> Result<(), &'static str> {
@@ -78,19 +79,22 @@ fn main() -> Result<(), &'static str> {
         let parsed_output = if compact {
             let (up_count, down_urls) = statuses.fold(
                 (0, Vec::new()),
-                |(up_count, mut down_urls), (url, is_up)| {
-                    if is_up {
-                        (up_count + 1, down_urls)
-                    } else {
-                        down_urls.push(url);
+                |(up_count, mut down_urls), (url, response)| {
+                    if let Err(error_text) = response {
+                        down_urls.push((url, error_text));
                         (up_count, down_urls)
+                    } else {
+                        (up_count + 1, down_urls)
                     }
                 },
             );
             let down_parsed = if down_urls.len() == 0 {
                 "0".to_string()
             } else {
-                down_urls.join(", ")
+                let urls = down_urls.iter().map(|(url, _e)| url.clone()).collect::<Vec<String>>().join(", ");
+                let issue_text = down_urls.iter().map(|(url, e)| format!("{}: {}", url, e).to_string()).collect::<Vec<String>>().join(", ");
+
+                urls + "\n" + &issue_text
             };
             format!(
                 "{}: {}, {}: {}",
@@ -98,8 +102,8 @@ fn main() -> Result<(), &'static str> {
             )
         } else {
             statuses
-                .map(|(url, status)| {
-                    let parsed_status = if status { val_map.up } else { val_map.down };
+                .map(|(url, response)| {
+                    let parsed_status = if response.is_ok() { val_map.up } else { val_map.down };
                     format!("{}: {}", url, parsed_status).to_owned()
                 })
                 .collect::<Vec<String>>()
